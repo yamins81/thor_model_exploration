@@ -17,11 +17,9 @@ from thoreano.slm import (TheanoExtractedFeatures,
 from thoreano.classifier import (evaluate_classifier_normalize,
                                  train_asgd_classifier_normalize)
 
-import comparisons as comp_module
-
 
 ##################################
-########lfw task evaluation
+#######synthetic task evaluation
 
 class ImgLoader(object):
     def __init__(self, fs, shape=None, ndim=None, dtype='uint8', mode=None):
