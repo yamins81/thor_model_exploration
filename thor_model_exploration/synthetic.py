@@ -96,7 +96,7 @@ def get_features(dataset, config):
     X = dataset.imgs
     batchsize = 4
     slm = slm_from_config(config, X.shape, batchsize=batchsize)
-    extractor = FeatureExtractor(X, slm, batchsize=batchsize)
+    extractor = FeatureExtractor(X, slm, batchsize=batchsize, verbose=True)
     features = extractor.compute_features()
 
 
@@ -140,7 +140,7 @@ def get_performance(configs, train_test_splits=None, im_query):
     """
     conn = pm.Connection()
     db = conn['thor']
-    im_hash = 'e02a3c3c19a43b6aae8c4e5d8d805a96c68dd82e'
+    
     coll = db['images.files']
     fs = gridfs.GridFS(db,'images')
     dataset = Imageset(coll, fs, im_query)
