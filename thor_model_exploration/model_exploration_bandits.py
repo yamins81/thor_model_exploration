@@ -11,6 +11,7 @@ import lfw
 import synthetic
 import model_exploration_params as params
 
+
 class LFWBandit(gb.GensonBandit):
     def __init__(self):
         super(LFWBandit, self).__init__(source_string=gh.string(params.original_params))
@@ -32,18 +33,26 @@ class LFWBanditModelExploration(gb.GensonBandit):
         return result
 
 
+all_invariance_query = {'config.image.bg_id':'gray.tdl',
+                'config.image.s': {'$exists': True},
+                'config.image.ty': {'$exists': True},
+                'config.image.rxy': {'$exists': True},
+                'config.image.rxz': {'$exists': True},
+                '__hash__': 'e02a3c3c19a43b6aae8c4e5d8d805a96c68dd82e'}
+
+
 class SyntheticBandit(gb.GensonBandit):
+
     def __init__(self):
         super(SyntheticBandit, self).__init__(source_string=gh.string(params.original_params))
 
     @classmethod
     def evaluate(cls, config, ctrl):
-        result = synthetic.get_performance(None, config)
+        result = synthetic.get_performance(None, config, all_invariance_query)
         return result
 
 
 class SyntheticBanditModelExploration(gb.GensonBandit):
-    im_query = {'config.image.bg_id':'gray.tdl'}
 
     def __init__(self):
         super(SyntheticBanditModelExploration, self).__init__(source_string=gh.string(params.order_value_params))
@@ -51,5 +60,5 @@ class SyntheticBanditModelExploration(gb.GensonBandit):
     @classmethod
     def evaluate(cls, config, ctrl, use_theano=True):
         config = params.get_reordered_model_config(config)
-        result = synthetic.get_performance(None, config, cls.im_query)
+        result = synthetic.get_performance(None, config, all_invariance_query)
         return result
