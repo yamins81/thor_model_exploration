@@ -105,8 +105,7 @@ def get_relevant_features(dataset, configs, splits):
 
 def get_features(X, config, relevant_inds):
     batchsize = 4
-    slm = slm_from_config(config, X.shape, batchsize=batchsize)
-    extractor = FeatureExtractor(X, slm, batchsize=batchsize, verbose=True, indices=relevant_inds)
+    extractor = ThoreanoFeatureExtractor(X, config, batchsize=batchsize, verbose=True, indices=relevant_inds)
     features = extractor.compute_features()
     return features
 
