@@ -98,15 +98,15 @@ def get_relevant_features(dataset, configs, splits):
     relevant_fnames = np.array(list(set(flatten(splits.values()))))
     all_fnames = np.array(map(str,[m['filename'] for m in dataset.meta]))
     relevant_inds = np.searchsorted(all_fnames, relevant_fnames)
-    X = dataset.imgs[relevant_inds]
+    X = dataset.imgs
     meta = [dataset.meta[ind] for ind in relevant_inds]
-    features = get_features(X, config)
+    features = get_features(X, config, relevant_inds)
     return features, meta
 
-def get_features(X, config):
+def get_features(X, config, relevant_inds):
     batchsize = 4
     slm = slm_from_config(config, X.shape, batchsize=batchsize)
-    extractor = FeatureExtractor(X, slm, batchsize=batchsize, verbose=True)
+    extractor = FeatureExtractor(X, slm, batchsize=batchsize, verbose=True, indices=relevant_inds)
     features = extractor.compute_features()
     return features
 
