@@ -13,7 +13,7 @@ import skdata.utils
 import numpy as np
 import pymongo as pm
 import gridfs
-from thoreano.slm import (FeatureExtractor,
+from thoreano.slm import (ThoreanoFeatureExtractor,
                           slm_from_config)
 from thoreano.classifier import (evaluate_classifier_normalize,
                                  train_asgd_classifier_normalize,
@@ -94,8 +94,8 @@ class Imageset(object):
 def flatten(listOfLists):
     return list(itertools.chain.from_iterable(listOfLists))
 
-def get_relevant_features(dataset, configs, splits):
-    relevant_fnames = np.array(list(set(flatten(splits.values()))))
+def get_relevant_features(dataset, config, splits):
+    relevant_fnames = sorted(np.array(list(set(flatten(splits.values())))))
     all_fnames = np.array(map(str,[m['filename'] for m in dataset.meta]))
     relevant_inds = np.searchsorted(all_fnames, relevant_fnames)
     X = dataset.imgs
@@ -186,3 +186,4 @@ def get_performance(config, im_query):
 
     record['loss'] = 1 - (record['training_data']['test_accuracy']/100.)
     print('DONE')
+    return record
