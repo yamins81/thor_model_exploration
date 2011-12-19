@@ -16,7 +16,8 @@ import gridfs
 from thoreano.slm import (FeatureExtractor,
                           slm_from_config)
 from thoreano.classifier import (evaluate_classifier_normalize,
-                                 train_asgd_classifier_normalize)
+                                 train_asgd_classifier_normalize,
+                                 train_scikits)
 
 
 ##################################
@@ -120,7 +121,8 @@ def traintest(dataset, features, catfunc, seed=0, ntrain=10, ntest=10, num_split
         train_Xy = (train_X, train_y)
         test_Xy = (test_X, test_y)
         print(len(train_y),len(test_y))
-        model, earlystopper, result = train_asgd_classifier_normalize(train_Xy, test_Xy, verbose=True)
+        #model, earlystopper, result = train_asgd_classifier_normalize(train_Xy, test_Xy, verbose=True)
+        model, result = train_scikits(train_Xy, test_Xy, 'liblinear', regression=False)
         results.append(result)
     return results
 
@@ -162,7 +164,7 @@ def get_performance(config, im_query):
     results = traintest(dataset, features, catfunc)
     stats = {}
     for stat in STATS:
-        stats[stat] = np.mean([r[2][stat] for r in results])
+        stats[stat] = np.mean([r[1][stat] for r in results])
     record['training_data'] =  stats
 
     record['loss'] = 1 - (record['training_data']['test_accuracy']/100.)
