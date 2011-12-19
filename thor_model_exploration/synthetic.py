@@ -158,7 +158,7 @@ MODEL_CATEGORIES_INVERTED = dict_inverse(MODEL_CATEGORIES)
 def get_performance(config, im_query):
     """
     """
-    conn = pm.Connection()
+    conn = pm.Connection('localhost',9100)
     db = conn['thor']
 
     coll = db['images.files']
@@ -187,3 +187,26 @@ def get_performance(config, im_query):
     record['loss'] = 1 - (record['training_data']['test_accuracy']/100.)
     print('DONE')
     return record
+
+
+def make_image_db(query):
+    HOME = os.environ['HOME']
+    datadir = os.path.join(HOME,'.data','db')
+    if not os.path.exists(datadir):
+        os.makedirs(datadir)
+    os.system("mongod run --config /home/render/thor_model_exploration/thor_model_exploration/mongo.conf --fork > ~/.data/startlog")
+    
+    conn = pm.Connection()
+    db = conn['thor']
+    coll = db['images.files']
+    fs = gridfs.GridFS(db,'images')
+
+    conn2 = pm.Connection('localhost',9100)
+    db2 = conn2['thor']
+    fs2 = gridfs.GridFS(db2,'images')
+    
+    C = coll.find(query)
+    for c in C:
+        print(c)
+        datastr = fs.get_version(c['filename']).read()
+        fs2.put(datastr,**c)
