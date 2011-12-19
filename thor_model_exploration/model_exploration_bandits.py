@@ -48,7 +48,7 @@ class SyntheticBandit(gb.GensonBandit):
 
     @classmethod
     def evaluate(cls, config, ctrl):
-        result = synthetic.get_performance(None, config, all_invariance_query)
+        result = synthetic.get_performance(config, all_invariance_query)
         return result
 
 

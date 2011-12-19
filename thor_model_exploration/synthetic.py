@@ -12,6 +12,7 @@ import skdata.larray
 import skdata.utils
 import numpy as np
 import pymongo as pm
+import gridfs
 from thoreano.slm import (TheanoExtractedFeatures,
                           use_memmap)
 from thoreano.classifier import (evaluate_classifier_normalize,
@@ -124,7 +125,7 @@ def traintest(dataset, features, catfunc, seed=0, ntrain=100, ntest=30, num_spli
 
 def dict_inverse(x):
     y = {}
-    for k in x.keys:
+    for k in x.keys():
         for kk in x[k]:
             if kk in y:
                 y[kk].append(k)
@@ -135,7 +136,7 @@ def dict_inverse(x):
 from synthetic_model_categories import MODEL_CATEGORIES
 MODEL_CATEGORIES_INVERTED = dict_inverse(MODEL_CATEGORIES)
 
-def get_performance(configs, train_test_splits=None, im_query):
+def get_performance(configs, im_query):
     """
     """
     conn = pm.Connection()
