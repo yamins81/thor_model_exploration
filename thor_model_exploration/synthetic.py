@@ -8,13 +8,13 @@ import os.path as path
 import hashlib
 
 import Image
-import skdata.larray
+import skdata.larray as larray
 import skdata.utils
 import numpy as np
 import pymongo as pm
 import gridfs
-from thoreano.slm import (TheanoExtractedFeatures,
-                          use_memmap)
+from thoreano.slm import (FeatureExtractor,
+                          slm_from_config)
 from thoreano.classifier import (evaluate_classifier_normalize,
                                  train_asgd_classifier_normalize)
 
@@ -60,7 +60,7 @@ class Imageset(object):
         self.coll = coll
         self.fs = fs
         self.query = query
-        cursor = coll.find(query)
+        cursor = coll.find(query).sort('filename')
         self.meta = list(cursor)
         self.filenames = [m['filename'] for m in self.meta]
         self.imgs = larray.lmap(ImgLoader(fs, ndim=3, shape=(200, 200, 3),  mode='RGB'),
@@ -74,8 +74,6 @@ class Imageset(object):
             labelset = [0]
             catfunc = lambda x : 0
 
-        ntrain = self.ntrain
-        ntest = self.ntest
         rng = np.random.RandomState(seed)
         splits = {}
         for split_id in range(num_splits):
@@ -87,9 +85,9 @@ class Imageset(object):
                 assert L >= ntrain + ntest, 'category %s too small' % name
                 perm = rng.permutation(L)
                 for ind in perm[:ntrain]:
-                    splits['train_' + str(split_id)].append(cat[ind]['filename'])
+                    splits['train_' + str(split_id)].append(str(cat[ind]['filename']))
                 for ind in perm[ntrain: ntrain + ntest]:
-                    splits['test_' + str(split_id)].append(cat[ind]['filename'])
+                    splits['test_' + str(split_id)].append(str(cat[ind]['filename']))
         return splits
 
 
@@ -99,12 +97,15 @@ def get_features(dataset, config):
     slm = slm_from_config(config, X.shape, batchsize=batchsize)
     extractor = FeatureExtractor(X, slm, batchsize=batchsize, verbose=True)
     features = extractor.compute_features()
+    return features
 
 
-def traintest(dataset, features, catfunc, seed=0, ntrain=100, ntest=30, num_splits=5):
-    Xr = np.array([m['filename'] for m in dataset.meta])
+def traintest(dataset, features, catfunc, seed=0, ntrain=10, ntest=10, num_splits=5):
+    Xr = np.array(map(str,[m['filename'] for m in dataset.meta]))
     labels = np.array([catfunc(m) for m in dataset.meta])
-    labelset = set(labels)
+    labelset = sorted(list(set(labels)))
+    labeldict = dict([(l,ind) for ind,l in enumerate(labelset)])
+    label_ids = np.array([labeldict[l] for l in labels])
     splits = dataset.generate_splits(seed, ntrain, ntest, num_splits, labelset=labelset, catfunc=catfunc)
     results = []
     for ind in range(num_splits):
@@ -114,11 +115,12 @@ def traintest(dataset, features, catfunc, seed=0, ntrain=100, ntest=30, num_spli
         test_inds = np.searchsorted(Xr,test_split)
         train_X = features[train_inds]
         test_X = features[test_inds]
-        train_y = labels[train_inds]
-        test_y = labels[test_inds]
+        train_y = label_ids[train_inds]
+        test_y = label_ids[test_inds]
         train_Xy = (train_X, train_y)
         test_Xy = (test_X, test_y)
-        model, earlystopper, result = train_asgd_classifier_normalize(train_Xy, test_Xy)
+        print(len(train_y),len(test_y))
+        model, earlystopper, result = train_asgd_classifier_normalize(train_Xy, test_Xy, verbose=True)
         results.append(result)
     return results
 
@@ -136,7 +138,7 @@ def dict_inverse(x):
 from synthetic_model_categories import MODEL_CATEGORIES
 MODEL_CATEGORIES_INVERTED = dict_inverse(MODEL_CATEGORIES)
 
-def get_performance(configs, im_query):
+def get_performance(config, im_query):
     """
     """
     conn = pm.Connection()
@@ -152,7 +154,7 @@ def get_performance(configs, im_query):
 
     record = {}
     record['num_features'] = num_features
-    recoord['feature_shape'] = fs
+    record['feature_shape'] = fs
 
     features = features.reshape((fs[0],num_features))
     STATS = ['train_accuracy','train_ap','train_auc','test_accuracy','test_ap','test_auc']
