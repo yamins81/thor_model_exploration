@@ -101,7 +101,7 @@ def get_features(dataset, config):
     return features
 
 
-def traintest(dataset, features, catfunc, seed=0, ntrain=10, ntest=10, num_splits=5):
+def traintest(dataset, features, catfunc, seed=0, ntrain=30, ntest=15, num_splits=5):
     Xr = np.array(map(str,[m['filename'] for m in dataset.meta]))
     labels = np.array([catfunc(m) for m in dataset.meta])
     labelset = sorted(list(set(labels)))
@@ -145,7 +145,7 @@ def get_performance(config, im_query):
     """
     conn = pm.Connection()
     db = conn['thor']
-    
+
     coll = db['images.files']
     fs = gridfs.GridFS(db,'images')
     dataset = Imageset(coll, fs, im_query)
