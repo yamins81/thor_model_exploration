@@ -91,33 +91,49 @@ class Imageset(object):
                     splits['test_' + str(split_id)].append(str(cat[ind]['filename']))
         return splits
 
+def flatten(listOfLists):
+    return list(itertools.chain.from_iterable(listOfLists))
 
-def get_features(dataset, config):
-    X = dataset.imgs
+def get_relevant_features(dataset, configs, splits):
+    relevant_fnames = np.array(list(set(flatten(splits.values()))))
+    all_fnames = np.array(map(str,[m['filename'] for m in dataset.meta]))
+    relevant_inds = np.searchsorted(all_fnames, relevant_fnames)
+    X = dataset.imgs[relevant_inds]
+    meta = [dataset.meta[ind] for ind in relevant_inds]
+    features = get_features(X, config)
+    return features, meta
+
+def get_features(X, config):
     batchsize = 4
     slm = slm_from_config(config, X.shape, batchsize=batchsize)
     extractor = FeatureExtractor(X, slm, batchsize=batchsize, verbose=True)
     features = extractor.compute_features()
     return features
 
-
-def traintest(dataset, features, catfunc, seed=0, ntrain=30, ntest=15, num_splits=5):
+def get_splits(dataset, catfunc, seed=0, ntrain=30, ntest=15, num_splits=5):
     Xr = np.array(map(str,[m['filename'] for m in dataset.meta]))
     labels = np.array([catfunc(m) for m in dataset.meta])
     labelset = sorted(list(set(labels)))
-    labeldict = dict([(l,ind) for ind,l in enumerate(labelset)])
-    label_ids = np.array([labeldict[l] for l in labels])
     splits = dataset.generate_splits(seed, ntrain, ntest, num_splits, labelset=labelset, catfunc=catfunc)
+    return splits
+
+def traintest(features, meta, catfunc, splits):
+    labels = np.array([catfunc(m) for m in meta])
+    Xr = np.array([m['filename'] for m in meta])
+    #labelset = sorted(list(set(labels)))
+    #labeldict = dict([(l,ind) for ind,l in enumerate(labelset)])
+    #label_ids = np.array([labeldict[l] for l in labels])
+    num_splits = len(splits)/2
     results = []
     for ind in range(num_splits):
         train_split = np.array(splits['train_' + str(ind)])
         test_split = np.array(splits['test_' + str(ind)])
-        train_inds = np.searchsorted(Xr,train_split)
-        test_inds = np.searchsorted(Xr,test_split)
+        train_inds = np.searchsorted(Xr, train_split)
+        test_inds = np.searchsorted(Xr, test_split)
         train_X = features[train_inds]
         test_X = features[test_inds]
-        train_y = label_ids[train_inds]
-        test_y = label_ids[test_inds]
+        train_y = labels[train_inds]
+        test_y = labels[test_inds]
         train_Xy = (train_X, train_y)
         test_Xy = (test_X, test_y)
         print(len(train_y),len(test_y))
@@ -150,21 +166,23 @@ def get_performance(config, im_query):
     fs = gridfs.GridFS(db,'images')
     dataset = Imageset(coll, fs, im_query)
 
-    features = get_features(dataset, config)
+    catfunc = lambda x: MODEL_CATEGORIES_INVERTED[x['config']['image']['model_id']][0]
+    splits = get_splits(dataset, catfunc)
+
+    features, meta = get_relevant_features(dataset, config, splits)
     fs = features.shape
     num_features = fs[1]*fs[2]*fs[3]
 
     record = {}
     record['num_features'] = num_features
-    record['feature_shape'] = fs
+    record['feature_shape'] = fs[1:]
 
     features = features.reshape((fs[0],num_features))
     STATS = ['train_accuracy','train_ap','train_auc','test_accuracy','test_ap','test_auc']
-    catfunc = lambda x: MODEL_CATEGORIES_INVERTED[x['config']['image']['model_id']][0]
-    results = traintest(dataset, features, catfunc)
+    results = traintest(features, meta, catfunc, splits)
     stats = {}
     for stat in STATS:
-        stats[stat] = np.mean([r[1][stat] for r in results])
+        stats[stat] = np.mean([r[stat] for r in results])
     record['training_data'] =  stats
 
     record['loss'] = 1 - (record['training_data']['test_accuracy']/100.)
