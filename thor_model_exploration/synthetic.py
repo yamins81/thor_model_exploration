@@ -109,16 +109,18 @@ def get_features(X, config, relevant_inds):
     features = extractor.compute_features()
     return features
 
-def get_splits(dataset, catfunc, seed=0, ntrain=30, ntest=15, num_splits=5):
+
+def get_splits(dataset, catfunc, seed, ntrain, ntest, num_splits):
     Xr = np.array(map(str,[m['filename'] for m in dataset.meta]))
     labels = np.array([catfunc(m) for m in dataset.meta])
     labelset = sorted(list(set(labels)))
     splits = dataset.generate_splits(seed, ntrain, ntest, num_splits, labelset=labelset, catfunc=catfunc)
     return splits
 
+
 def traintest(features, meta, catfunc, splits):
     labels = np.array([catfunc(m) for m in meta])
-    Xr = np.array([m['filename'] for m in meta])
+    Xr = np.array(map(str,[m['filename'] for m in meta]))
     #labelset = sorted(list(set(labels)))
     #labeldict = dict([(l,ind) for ind,l in enumerate(labelset)])
     #label_ids = np.array([labeldict[l] for l in labels])
@@ -166,8 +168,12 @@ def get_performance(config, im_query):
     dataset = Imageset(coll, fs, im_query)
 
     catfunc = lambda x: MODEL_CATEGORIES_INVERTED[x['config']['image']['model_id']][0]
-    splits = get_splits(dataset, catfunc)
-
+    seed = 0
+    ntrain = 30
+    ntest = 10
+    num_splits = 5
+    splits = get_splits(dataset, catfunc, seed=seed, ntrain=ntrain, ntest=ntest, num_splits=num_splits)
+    
     features, meta = get_relevant_features(dataset, config, splits)
     fs = features.shape
     num_features = fs[1]*fs[2]*fs[3]
@@ -175,16 +181,19 @@ def get_performance(config, im_query):
     record = {}
     record['num_features'] = num_features
     record['feature_shape'] = fs[1:]
+    record['split_data'] = {'seed': seed, 'ntrain': ntrain, 'ntest': ntest, 'num_splits': num_splits}
 
     features = features.reshape((fs[0],num_features))
     STATS = ['train_accuracy','train_ap','train_auc','test_accuracy','test_ap','test_auc']
     results = traintest(features, meta, catfunc, splits)
     stats = {}
     for stat in STATS:
-        stats[stat] = np.mean([r[stat] for r in results])
+        stats[stat] = {'mean': np.mean([r[stat] for r in results]),
+                       'std': np.std([r[stat] for r in results])}
     record['training_data'] =  stats
 
-    record['loss'] = 1 - (record['training_data']['test_accuracy']/100.)
+    record['loss'] = 1 - (record['training_data']['test_accuracy']['mean']/100.)
+
     print('DONE')
     return record
 

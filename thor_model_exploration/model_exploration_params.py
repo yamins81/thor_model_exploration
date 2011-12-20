@@ -75,7 +75,7 @@ values = [{'lnorm':lnorm, 'lpool':lpool, 'activ':activ, 'filter':filter1},
           {'lnorm':lnorm, 'lpool':lpool, 'activ':activ, 'filter':filter3}]
 order_value_params = {'order':orders, 'values':values}
 
-def get_model_config(config):
+def get_reordered_model_config(config):
     before, after = config['order']
     values = config['values']
     layers = []

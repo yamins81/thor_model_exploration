@@ -60,5 +60,5 @@ class SyntheticBanditModelExploration(gb.GensonBandit):
     @classmethod
     def evaluate(cls, config, ctrl, use_theano=True):
         config = params.get_reordered_model_config(config)
-        result = synthetic.get_performance(None, config, all_invariance_query)
+        result = synthetic.get_performance(config, all_invariance_query)
         return result
