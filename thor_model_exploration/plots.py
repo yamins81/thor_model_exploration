@@ -1,3 +1,5 @@
+import pymongo as pm
+
 def make_plot():
     conn = pm.Connection()
     db = conn['hyperopt']
@@ -26,3 +28,17 @@ def make_plot():
     plt.savefig('model_exploration_boxplots.png')
 
     return L, (H0, NF0)
+
+
+def see_results(exp_key):
+    conn = pm.Connection()
+    db = conn['hyperopt']
+    Jobs = db['jobs']
+    H = Jobs.group(['spec.order'],
+                   {'exp_key': exp_key, 'state':2},
+                   {'C': 0, 'T': 0, 'T2': 0},
+                   'function(d, o){o.C += 1; o.T += d.result.loss; o.T2 += Math.pow(d.result.loss, 2);}',
+                   'function(o){o.avg = o.T/o.C; o.std = Math.sqrt(o.T2/o.C - Math.pow(o.avg,2)); o.score = 1 - o.avg;}'
+                  )
+
+    return H
