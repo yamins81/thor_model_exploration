@@ -203,7 +203,7 @@ def make_image_db(query):
     datadir = os.path.join(HOME,'.data','db')
     if not os.path.exists(datadir):
         os.makedirs(datadir)
-    os.system("mongod run --config /home/render/thor_model_exploration/thor_model_exploration/mongo.conf --fork > ~/.data/startlog")
+    #os.system("mongod run --config /home/render/thor_model_exploration/thor_model_exploration/mongo.conf --fork > ~/.data/startlog")
     
     conn = pm.Connection()
     db = conn['thor']
