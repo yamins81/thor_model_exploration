@@ -213,6 +213,8 @@ def make_image_db(query):
     conn2 = pm.Connection('localhost',9100)
     db2 = conn2['thor']
     fs2 = gridfs.GridFS(db2,'images')
+    coll2 = db2['images.files']
+    coll2.ensure_index('filename')
     
     C = coll.find(query)
     for c in C:
