@@ -70,11 +70,15 @@ original_params = {'desc': [[('lnorm', lnorm)],
 ####reordered models
 order_choices = [[list(o[:ind]),list(o[ind:])] for o in list(itertools.permutations(['lpool','activ','lnorm'])) for ind in range(4)]
 orders = choice(order_choices)
+
 values = [{'lnorm':lnorm, 'lpool':lpool, 'activ':activ, 'filter':filter1},
           {'lnorm':lnorm, 'lpool':lpool, 'activ':activ, 'filter':filter2},
           {'lnorm':lnorm, 'lpool':lpool, 'activ':activ, 'filter':filter3}]
 order_value_params = {'order':orders, 'values':values}
-
+values2 = [{'lnorm':lnorm, 'lpool':lpool, 'activ':activ, 'filter':filter1},
+           {'lnorm':lnorm, 'lpool':lpool, 'activ':activ, 'filter':filter2}]
+order_value_params2 = {'order':orders, 'values':values2}
+                      
 def get_reordered_model_config(config):
     before, after = config['order']
     values = config['values']

@@ -62,3 +62,9 @@ class SyntheticBanditModelExploration(gb.GensonBandit):
         config = params.get_reordered_model_config(config)
         result = synthetic.get_performance(config, all_invariance_query)
         return result
+
+
+class SyntheticBanditModelExplorationL2(SyntheticBanditModelExploration):
+    def __init__(self):
+        super(SyntheticBanditModelExplorationL2, self).__init__(source_string=gh.string(params.order_value_params2))
+                
