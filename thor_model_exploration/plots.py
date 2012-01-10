@@ -1,6 +1,7 @@
 import os
 import copy
 
+import matplotlib.pyplot as plt
 import pymongo as pm
 import numpy as np
 
@@ -128,6 +129,58 @@ DISCRETE_PARAMS_BASE = [('activ.kwargs.max_out', idf,'max_out'),
 odict = {'lpool': 'p', 'lnorm': 'n', 'activ':'a'}
 ofunc = lambda x: str('|'.join([''.join([odict[yy] for yy in y]) for y in x]))
 DISCRETE_PARAMS = [('order', ofunc, 'order')] + [('values.' + str(_ind) + '.' + _p, _f, _n + str(_ind+1)) for _ind in range(3) for (_p, _f, _n) in DISCRETE_PARAMS_BASE]
+
+
+def nothres_ranks():
+    def rank_func(exp_key):
+        import matplotlib.pyplot as plt
+        conn = pm.Connection()
+        db = conn['hyperopt']
+        Jobs = db['jobs']
+
+        base_q = {'exp_key': exp_key, 'state':2, 'spec.values.0.lnorm.kwargs.threshold':None,
+                  'spec.values.1.lnorm.kwargs.threshold':None, 'spec.values.2.lnorm.kwargs.threshold':None}
+        A1 = np.array([x['result']['loss'] for x in Jobs.find(base_q).sort('result.loss')])
+        base_q2 = {'exp_key': exp_key, 'state':2}
+        A2 = np.array([x['result']['loss'] for x in Jobs.find(base_q2).sort('result.loss')])
+
+        R = np.searchsorted(A2,A1)/float(len(A2))
+
+        return R
+
+    exp_key1 = 'thor_model_exploration.model_exploration_bandits.SyntheticBanditModelExploration/hyperopt.theano_bandit_algos.TheanoRandom/fewer_training_examples'
+    R1 = rank_func(exp_key1)
+    exp_key2 = 'lfw_model_exploration.LFWBanditModelExploration/hyperopt.theano_bandit_algos.TheanoRandom'
+    R2 = rank_func(exp_key2)
+
+    plt.figure()
+    plt.plot(np.arange(0,1,1./len(R1)),R1)
+    plt.plot(np.arange(0,1,1./len(R2)),R2)
+    plt.legend(('Synthetic','LFW'), loc='upper left')
+    plt.plot(np.arange(0,1,1./len(R2)), np.arange(0,1,1./len(R2)), color='black')
+    plt.title('Synthetic and LFW no-threshold vs all ranks')
+    plt.ylabel('Relative rank to full distribution')
+    plt.xlabel('Absolute rank within no-threshold subset')
+    plt.savefig('No_threshold_ranking_comparison.png')
+
+
+
+def analysis_nothresh(exp_key, ttl, outfile):
+
+    conn = pm.Connection()
+    db = conn['hyperopt']
+    Jobs = db['jobs']
+
+    base_q = {'exp_key': exp_key, 'state':2, 'spec.values.0.lnorm.kwargs.threshold':None,
+              'spec.values.1.lnorm.kwargs.threshold':None, 'spec.values.2.lnorm.kwargs.threshold':None}
+
+    params = [('order', ofunc, 'order')] + [('values.' + str(_ind) + '.' + _p, _f, _n + str(_ind+1)) for _ind in range(3) for (_p, _f, _n) in DISCRETE_PARAMS_BASE if _n != 'threshold']
+    analysis_core(base_q, outfile, ttl, params)
+
+
+def analysis_synthetic_nothresh():
+    exp_key = 'thor_model_exploration.model_exploration_bandits.SyntheticBanditModelExploration/hyperopt.theano_bandit_algos.TheanoRandom/fewer_training_examples'
+    analysis_nothresh(exp_key, 'synthetic model exploration analysis -- no threshold', 'nothresh_analysis_synthetic.png')
 
 
 def analysis_synthetic():
