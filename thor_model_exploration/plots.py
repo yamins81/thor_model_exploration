@@ -209,60 +209,103 @@ def analysis(exp_key, outdir, base_ttl):
         analysis_core(qry, path, ttl, Jobs=Jobs)
 
 
-def analysis_core(qry, outfile, ttl, params=DISCRETE_PARAMS, Jobs=None):
+def before_after_lfw():
+    before_after_analysis('lfw_model_exploration.LFWBanditModelExploration/hyperopt.theano_bandit_algos.TheanoRandom',
+                          'LFW',
+                          'LFW')
+
+
+def before_after_synthetic():
+    before_after_analysis('thor_model_exploration.model_exploration_bandits.SyntheticBanditModelExploration/hyperopt.theano_bandit_algos.TheanoRandom/fewer_training_examples',
+                          'synthetic',
+                          'Synthetic')
+
+
+def before_after_analysis(exp_key, outroot, ttlroot):
+    before_q = {'exp_key': exp_key, 'state':2, 'spec.order.1':[]}
+    after_q = {'exp_key': exp_key, 'state':2, 'spec.order.0':[]}
+    analysis_core(before_q, 'before_' + outroot + '.png', ttlroot + ' before orders')
+    analysis_core(after_q, 'after_' + outroot + '.png', ttlroot + ' after orders')
+
+def before_after_lfw2():
+    before_after_analysis2('lfw_model_exploration.LFWBanditModelExploration/hyperopt.theano_bandit_algos.TheanoRandom',
+                          'LFW',
+                          'LFW')
+
+def before_after_synthetic2():
+    before_after_analysis2('thor_model_exploration.model_exploration_bandits.SyntheticBanditModelExploration/hyperopt.theano_bandit_algos.TheanoRandom/fewer_training_examples',
+                          'synthetic',
+                          'Synthetic')
+
+def before_after_analysis2(exp_key, outroot, ttlroot):
+    before_q = {'exp_key': exp_key, 'state':2, 'spec.order.1':[]}
+    after_q = {'exp_key': exp_key, 'state':2, 'spec.order.0':[]}
+    analysis_core([('before',before_q),('after',after_q)], 'before_after_' + outroot + '.png', ttlroot, boxplots=True)
+
+def analysis_core(queries, outfile, ttl, params=DISCRETE_PARAMS, Jobs=None, boxplots = True):
+    if isinstance(queries,dict):
+        queries = [('',queries)]
+
     if Jobs is None:
         conn = pm.Connection()
         db = conn['hyperopt']
         Jobs = db['jobs']
 
-    import matplotlib.pyplot as plt
-    H = {}
+    Max = lambda _s: np.max(_s) if len(_s) > 0 else None
+    Min = lambda _s: np.min(_s) if len(_s) > 0 else None
+
     fig = plt.figure(figsize=(24,12))
     for p_ind, (param, lfunc, pname) in enumerate(params):
-        L = Jobs.group(['spec.' + param],
-                       qry,
-                       {'A': []},
-                       'function(d, o){o.A.push(d.result.loss);}',
-                      )
-
-        if lfunc is None:
-            lfunc = idf
-            ranges = [2,4,6,8,10]
-            l0 = [{'spec.' + param:r, 'A':[]} for r in ranges]
-            newL = []
-            for l in L:
-                if l['spec.' + param] is not None:
-                    ind = np.searchsorted(ranges,l['spec.' + param])
-                    l0[ind]['A'].extend(l['A'])
-                else:
-                    newL.append(l)
-            newL.extend(l0)
-            L = newL
-
-        H[param] = L
-        vals = np.array([lfunc(h['spec.'+param]) for h in H[param]])
-
-        s = vals.argsort()
-        vals_sort = vals[s]
-
-        Max = lambda _s: np.max(_s) if len(_s) > 0 else None
-        Min = lambda _s: np.min(_s) if len(_s) > 0 else None
-
         p = plt.subplot(4,8,p_ind+1)
-        plt.title(pname)
-        p.boxplot([H[param][_i]['A'] for _i in s])
-        p.plot(range(1,len(vals_sort)+1),[np.mean(H[param][_i]['A']) for _i in s])
-        p.plot(range(1,len(vals_sort)+1),[Max(H[param][_i]['A']) for _i in s])
-        p.plot(range(1,len(vals_sort)+1),[Min(H[param][_i]['A']) for _i in s])
-        plt.xticks(range(1,len(vals_sort)+1),vals_sort,rotation=30,ha='left')
+        lines = []
+        for (qryname,qry) in queries:
+            L = Jobs.group(['spec.' + param],
+                           qry,
+                           {'A': []},
+                           'function(d, o){o.A.push(d.result.loss);}',
+                          )
 
+            if lfunc is None:
+                lfunc_use = idf
+                ranges = [2,4,6,8,10]
+                l0 = [{'spec.' + param:r, 'A':[]} for r in ranges]
+                newL = []
+                for l in L:
+                    if l['spec.' + param] is not None:
+                        ind = np.searchsorted(ranges,l['spec.' + param])
+                        l0[ind]['A'].extend(l['A'])
+                    else:
+                        newL.append(l)
+                newL.extend(l0)
+                L = newL
+            else:
+                lfunc_use=lfunc
+
+            vals = np.array([lfunc_use(h['spec.'+param]) for h in L])
+
+            s = vals.argsort()
+            vals_sort = vals[s]
+
+            if boxplots:
+                p.boxplot([L[_i]['A'] for _i in s])
+
+            lines.append(p.plot(range(1,len(vals_sort)+1),[np.mean(L[_i]['A']) for _i in s]))
+            lines.append(p.plot(range(1,len(vals_sort)+1),[Max(L[_i]['A']) for _i in s]))
+            lines.append(p.plot(range(1,len(vals_sort)+1),[Min(L[_i]['A']) for _i in s]))
+        plt.xticks(range(1,len(vals_sort)+1),vals_sort,rotation=30,ha='left')
+        plt.title(pname)
+
+    linenames = []
+    for x,y in queries:
+        for st in ['mean', 'max', 'min']:
+            linenames.append(x + ' ' + st)
+    plt.figlegend(lines,linenames,'center left')
 
     plt.subplots_adjust(hspace=.3)
-    plt.suptitle(ttl, fontsize=20, y=.95)
+    plt.suptitle(ttl + ' (losses -- smaller is better!)', fontsize=20, y=.95)
     plt.draw()
     plt.savefig(outfile)
     plt.close('all')
-    return H
 
 def get_vals(vals):
     V = []
