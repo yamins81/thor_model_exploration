@@ -174,7 +174,7 @@ def analysis_core(qry, outfile, ttl, params=DISCRETE_PARAMS, Jobs=None):
 
         if lfunc is None:
             lfunc = idf
-            ranges = [.1,1,10]
+            ranges = [2,4,6,8,10]
             l0 = [{'spec.' + param:r, 'A':[]} for r in ranges]
             newL = []
             for l in L:
