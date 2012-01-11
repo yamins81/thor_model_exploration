@@ -4,6 +4,7 @@ import copy
 import matplotlib.pyplot as plt
 import pymongo as pm
 import numpy as np
+import scipy.stats as stats
 
 import model_exploration_params as params
 
@@ -240,11 +241,14 @@ def before_after_synthetic2():
 def before_after_analysis2(exp_key, outroot, ttlroot):
     before_q = {'exp_key': exp_key, 'state':2, 'spec.order.1':[]}
     after_q = {'exp_key': exp_key, 'state':2, 'spec.order.0':[]}
-    analysis_core([('before',before_q),('after',after_q)], 'before_after_' + outroot + '.png', ttlroot, boxplots=True)
+    analysis_core([('before',before_q),('after',after_q)], 'before_after_' + outroot + '.png', ttlroot, boxplots=True, do_max = False, do_min = False)
 
-def analysis_core(queries, outfile, ttl, params=DISCRETE_PARAMS, Jobs=None, boxplots = True):
+def analysis_core(queries, outfile, ttl, params=DISCRETE_PARAMS, Jobs=None, boxplots = True, percentiles = [], do_max = True, do_min = True):
     if isinstance(queries,dict):
         queries = [('',queries)]
+
+    if percentiles is None:
+        percentiles = []
 
     if Jobs is None:
         conn = pm.Connection()
@@ -253,6 +257,7 @@ def analysis_core(queries, outfile, ttl, params=DISCRETE_PARAMS, Jobs=None, boxp
 
     Max = lambda _s: np.max(_s) if len(_s) > 0 else None
     Min = lambda _s: np.min(_s) if len(_s) > 0 else None
+    Pct = lambda _s, _pct: stats.scoreatpercentile(_s, _pct) if len(_s) > 0 else None
 
     fig = plt.figure(figsize=(24,12))
     for p_ind, (param, lfunc, pname) in enumerate(params):
@@ -290,14 +295,18 @@ def analysis_core(queries, outfile, ttl, params=DISCRETE_PARAMS, Jobs=None, boxp
                 p.boxplot([L[_i]['A'] for _i in s])
 
             lines.append(p.plot(range(1,len(vals_sort)+1),[np.mean(L[_i]['A']) for _i in s]))
-            lines.append(p.plot(range(1,len(vals_sort)+1),[Max(L[_i]['A']) for _i in s]))
-            lines.append(p.plot(range(1,len(vals_sort)+1),[Min(L[_i]['A']) for _i in s]))
+            if do_max:
+                lines.append(p.plot(range(1,len(vals_sort)+1),[Max(L[_i]['A']) for _i in s]))
+            if do_min:
+                lines.append(p.plot(range(1,len(vals_sort)+1),[Min(L[_i]['A']) for _i in s]))
+            for pct in percentiles:
+                lines.append(p.plot(range(1,len(vals_sort)+1),[Pct(L[_i]['A'], pct) for _i in s]))
         plt.xticks(range(1,len(vals_sort)+1),vals_sort,rotation=30,ha='left')
         plt.title(pname)
 
     linenames = []
     for x,y in queries:
-        for st in ['mean', 'max', 'min']:
+        for st in ['mean'] + (['max'] if do_max else []) + (['min'] if do_min else []) + [str(y) + 'p' for y in percentiles]:
             linenames.append(x + ' ' + st)
     plt.figlegend(lines,linenames,'center left')
 
