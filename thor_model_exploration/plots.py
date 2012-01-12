@@ -259,9 +259,9 @@ def analysis_core(queries, outfile, ttl, params=DISCRETE_PARAMS, Jobs=None, boxp
     Min = lambda _s: np.min(_s) if len(_s) > 0 else None
     Pct = lambda _s, _pct: stats.scoreatpercentile(_s, _pct) if len(_s) > 0 else None
 
-    fig = plt.figure(figsize=(24,12))
+    fig = plt.figure(figsize=(16,12))
     for p_ind, (param, lfunc, pname) in enumerate(params):
-        p = plt.subplot(4,8,p_ind+1)
+        p = plt.subplot(6,6,p_ind+1)
         lines = []
         for (qryname,qry) in queries:
             L = Jobs.group(['spec.' + param],
@@ -310,7 +310,7 @@ def analysis_core(queries, outfile, ttl, params=DISCRETE_PARAMS, Jobs=None, boxp
             linenames.append(x + ' ' + st)
     plt.figlegend(lines,linenames,'center left')
 
-    plt.subplots_adjust(hspace=.3)
+    plt.subplots_adjust(hspace=.4)
     plt.suptitle(ttl + ' (losses -- smaller is better!)', fontsize=20, y=.95)
     plt.draw()
     plt.savefig(outfile)
