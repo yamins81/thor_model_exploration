@@ -107,10 +107,11 @@ def get_performance(outfile, configs, train_test_splits=None, use_theano=True,
                             with PairFeatures(dataset, test_split,
                                 Xr, n_features, features_fps, comparison_obj,
                                           test_pairs_filename) as test_Xy:
-                                model, earlystopper, data = train_asgd_classifier_normalize(train_Xy, validate_Xy)
+                                model, earlystopper, data = train_asgd_classifier_normalize(train_Xy, validate_Xy, verbose=True)
                                 print('earlystopper', earlystopper.best_y)
-                                result = evaluate_classifier_normalize(model, test_Xy, data)
-                                perf.append(result['loss'])
+                                result = evaluate_classifier_normalize(model, test_Xy, data, verbose=True)
+                                loss = 1 - result['test_accuracy']/100.
+                                perf.append(loss)
                                 print ('Split',tts, 'comparison', comparison, 'loss is', result['loss'])
                                 n_test_examples = len(test_Xy[0])
                                 result['split'] = tts
@@ -126,10 +127,14 @@ def get_performance(outfile, configs, train_test_splits=None, use_theano=True,
                         with PairFeatures(dataset, test_split,
                                 Xr, n_features, features_fps, comparison_obj,
                                           test_pairs_filename) as test_Xy:
-                            model, earlystopper, data = train_asgd_classifier_normalize(train_Xy, test_Xy)
-                            perf.append(data['loss'])
+                            model, earlystopper, data = train_asgd_classifier_normalize(train_Xy, test_Xy, verbose=False)
+                            loss = 1 - data['test_accuracy']/100.
+                            perf.append(loss)
                             n_test_examples = len(test_Xy[0])
                             data['split'] = tts
+                            data.pop('train_mean')
+                            data.pop('train_std')
+                            data.pop('trace')
                             data.update(f_info)
                             datas[comparison].append(data)
 
