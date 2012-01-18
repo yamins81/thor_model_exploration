@@ -1,6 +1,7 @@
 """
-# MUST be run with feature/separate_activation branch of thoreano
+# MUST be run with develop branch of thoreano
 """
+import copy
 
 import numpy as np
 import hyperopt.genson_bandits as gb
@@ -25,8 +26,11 @@ class BaseBandit(gb.GensonBandit):
 
 
 class ModelExplorationBase(BaseBandit):
-    config_gen_func = params.get_reordered_model_config
     param_gen = params.order_value_params
+
+    @classmethod
+    def config_gen_func(cls, config):
+        return params.get_reordered_model_config(config)
     
     @classmethod
     def evaluate(cls, config, ctrl):
@@ -34,10 +38,9 @@ class ModelExplorationBase(BaseBandit):
         return cls.performance_func(desc, ctrl)
 
 
-class ModelEvaluationBase(BaseBandit):
-    orders = params.order_choices
-    config_gen_func = params.get_reordered_model_config
+class ModelEvaluationBase(ModelExplorationBase):
     param_gen = params.value_params
+    orders = params.order_choices
         
     @classmethod
     def evaluate(cls, config, ctrl):
@@ -46,7 +49,7 @@ class ModelEvaluationBase(BaseBandit):
         for order in cls.orders:
             order_value_config = copy.deepcopy(config)
             order_value_config['order'] = order
-            desc = config_gen_func(order_value_config)
+            desc = cls.config_gen_func(order_value_config)
             result['order_results'].append(cls.performance_func(desc, ctrl))
         result['loss'] = np.mean([ord_res['loss'] for ord_res in result['order_results']])
         result['status'] = 'ok'
@@ -61,20 +64,26 @@ class RemovalsEvaluationBase(ModelEvaluationBase):
     orders = params.order_choices_removals
 
 
-class StandardFirstDifferentRemovalsExplorationBase(ModelExplorationBase):
+class FirstDifferentBase(object):
+    @classmethod
+    def config_gen_func(cls, config):
+        return params.get_reordered_model_config_first_different(config)
+
+
+class StandardFirstDifferentRemovalsExplorationBase(FirstDifferentBase, ModelExplorationBase):
     param_gen = params.standard_order_removals_first_different_value_params
-    config_gen_func = params.get_reordered_model_config_first_different
 
 
-class StandardFirstDifferentRemovalsEvaluationBase(ModelEvaluationBase):
+class StandardFirstDifferentRemovalsEvaluationBase(FirstDifferentBase, ModelEvaluationBase):
     orders = params.standard_removed_orders_first_different
-    config_gen_func = params.get_reordered_model_config_first_different
- 
- 
+
+
 
 #######LFW
 class LFWBase(object):
-    def performance_func(config, ctrl):
+
+    @classmethod
+    def performance_func(cls, config, ctrl):
         return lfw.get_performance(None, config)
     
     
@@ -105,7 +114,9 @@ synthetic_invariance_query = {'config.image.bg_id':'gray.tdl',
 
 
 class SyntheticBase(object):
-    def performance_func(config, ctrl):
+
+    @classmethod
+    def performance_func(cls, config, ctrl):
         return synthetic.get_performance(config, synthetic_invariance_query)
 
 

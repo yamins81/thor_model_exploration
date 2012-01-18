@@ -81,9 +81,7 @@ def get_performance(outfile, configs, train_test_splits=None, use_theano=True,
     train_pairs_filename = 'train_pairs_' + c_hash + '.dat'
     validate_pairs_filename = 'validate_pairs_' + c_hash + '.dat'
     test_pairs_filename = 'test_pairs_' + c_hash + '.dat'
-    with TheanoExtractedFeatures(X, batchsize, configs, feature_file_names,
-                                 use_theano=use_theano, tlimit=tlimit) as features_fps:
-
+    with TheanoExtractedFeatures(X, batchsize, configs, feature_file_names, tlimit=tlimit) as features_fps:
         feature_shps = [features_fp.shape for features_fp in features_fps]
         datas = {}
         for comparison in comparisons:
