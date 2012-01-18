@@ -157,10 +157,10 @@ def dict_inverse(x):
 from synthetic_model_categories import MODEL_CATEGORIES
 MODEL_CATEGORIES_INVERTED = dict_inverse(MODEL_CATEGORIES)
 
-def get_performance(config, im_query):
+def get_performance(config, im_query, host='localhost', port=9100):
     """
     """
-    conn = pm.Connection('localhost',9100)
+    conn = pm.Connection(host, port)
     db = conn['thor']
 
     coll = db['images.files']
