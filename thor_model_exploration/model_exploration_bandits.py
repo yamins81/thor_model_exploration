@@ -50,8 +50,12 @@ class ModelEvaluationBase(ModelExplorationBase):
             order_value_config = copy.deepcopy(config)
             order_value_config['order'] = order
             desc = cls.config_gen_func(order_value_config)
-            result['order_results'].append(cls.performance_func(desc, ctrl))
-        result['loss'] = np.mean([ord_res['loss'] for ord_res in result['order_results']])
+            try:
+                ord_res = cls.performance_func(desc, ctrl)
+            except:
+                ord_res = {'status': 'error'}
+            result['order_results'].append(ord_res)
+        result['loss'] = np.mean([ord_res.get('loss', 1) for ord_res in result['order_results']])
         result['status'] = 'ok'
         return result
 
