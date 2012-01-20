@@ -101,6 +101,10 @@ class LFWBanditModelExploration(ModelExplorationBase, LFWBase):
 
 class LFWBanditRemovalsEvaluation(RemovalsEvaluationBase, LFWBase):
     pass
+
+
+class LFWBanditRemovalsExploration(RemovalsExplorationBase, LFWBase):
+    pass
     
     
 class LFWBanditStandardFirstDifferentRemovalsEvaluation(StandardFirstDifferentRemovalsEvaluationBase, LFWBase):
