@@ -94,10 +94,12 @@ def get_relevant_values(_v, _ord):
         _v[_ind] = dict([(key,val) for (key,val) in _v[_ind].items() if key in ops])
     return _v
         
-order_choices_removals_values = [{'order':_o, 'values': get_relevant_values(values,_o)} for _o in order_choices_removals]
-order_removals_value_params = choice(order_choices_removals_values)
+order_choices_removals_values = [{'order':_o, 'values': get_relevant_values(values, _o)} for _o in order_choices_removals]
+order_removals_value_params = {'desc': choice(order_choices_removals_values)}
 
 def get_reordered_model_config(config):
+    if 'desc' in config:
+        config = config['desc']
     before, after = config['order']
     values = config['values']
     layers = []
@@ -129,7 +131,7 @@ def get_relevant_values_first_different(_v, _ord):
     return _v
     
 standard_removed_orders_first_different_values = [{'order':_o, 'values': get_relevant_values_first_different(values,_o)} for _o in standard_removed_orders_first_different]
-standard_order_removals_first_different_value_params = choice(standard_removed_orders_first_different_values)
+standard_order_removals_first_different_value_params = {'desc': choice(standard_removed_orders_first_different_values)}
 
 
 def get_reordered_model_config_first_different(config):
