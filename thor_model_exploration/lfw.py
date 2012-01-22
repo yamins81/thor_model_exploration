@@ -214,6 +214,8 @@ class PairFeatures(object):
         Ar = np.array([os.path.split(ar)[-1] for ar in A])
         Br = np.array([os.path.split(br)[-1] for br in B])
         labels = np.array(labels)
+        if set(labels) == set([0, 1]):
+            labels = 2*labels - 1
         Aind = np.searchsorted(X, Ar)
         Bind = np.searchsorted(X, Br)
         assert len(Aind) == len(Bind)

@@ -135,13 +135,15 @@ standard_order_removals_first_different_value_params = {'desc': choice(standard_
 
 
 def get_reordered_model_config_first_different(config):
+    if 'desc' in config:
+        config = config['desc']
     values = config['values']
     layers = []
-    config = {'desc':layers}
+    newconfig = {'desc':layers}
     for (layer_ind, vals) in enumerate(values):
         before, after = config['order'][0 if layer_ind == 0 else 1]
         B = [(b, vals[b]) for b in before]
         A = [(a, vals[a]) for a in after]
         layer = B + [('fbcorr',vals['filter'])] + A + [('rescale',rescale)]
         layers.append(layer)
-    return config
+    return newconfig

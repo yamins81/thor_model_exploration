@@ -15,9 +15,7 @@ import pymongo as pm
 import gridfs
 from thoreano.slm import (ThoreanoFeatureExtractor,
                           slm_from_config)
-from thoreano.classifier import (evaluate_classifier_normalize,
-                                 train_asgd_classifier_normalize,
-                                 train_scikits)
+from thoreano.classifier import train_scikits
 
 
 ##################################

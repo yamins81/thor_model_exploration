@@ -107,7 +107,7 @@ class LFWBanditRemovalsExploration(RemovalsExplorationBase, LFWBase):
     pass
     
     
-class LFWBanditStandardFirstDifferentRemovalsEvaluation(StandardFirstDifferentRemovalsEvaluationBase, LFWBase):
+class LFWBanditStandardFirstDifferentRemovalsExploration(StandardFirstDifferentRemovalsExplorationBase, LFWBase):
     pass
 
 
