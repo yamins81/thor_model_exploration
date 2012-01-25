@@ -15,7 +15,7 @@ import model_exploration_params as params
 
 #######base bandits
 class BaseBandit(gb.GensonBandit):
-    param_gen = params.original_params 
+    param_gen = params.original_params
 
     def __init__(self):
         super(BaseBandit, self).__init__(source_string=gh.string(self.param_gen))
@@ -31,7 +31,7 @@ class ModelExplorationBase(BaseBandit):
     @classmethod
     def config_gen_func(cls, config):
         return params.get_reordered_model_config(config)
-    
+
     @classmethod
     def evaluate(cls, config, ctrl):
         desc = cls.config_gen_func(config)
@@ -41,7 +41,7 @@ class ModelExplorationBase(BaseBandit):
 class ModelEvaluationBase(ModelExplorationBase):
     param_gen = params.value_params
     orders = params.order_choices
-        
+
     @classmethod
     def evaluate(cls, config, ctrl):
         result = {}
@@ -89,15 +89,15 @@ class LFWBase(object):
     @classmethod
     def performance_func(cls, config, ctrl):
         return lfw.get_performance(None, config)
-    
-    
+
+
 class LFWBandit(BaseBandit, LFWBase):
     pass
-        
+
 
 class LFWBanditModelExploration(ModelExplorationBase, LFWBase):
     pass
-   
+
 
 class LFWBanditRemovalsEvaluation(RemovalsEvaluationBase, LFWBase):
     pass
@@ -105,8 +105,8 @@ class LFWBanditRemovalsEvaluation(RemovalsEvaluationBase, LFWBase):
 
 class LFWBanditRemovalsExploration(RemovalsExplorationBase, LFWBase):
     pass
-    
-    
+
+
 class LFWBanditStandardFirstDifferentRemovalsExploration(StandardFirstDifferentRemovalsExplorationBase, LFWBase):
     pass
 
@@ -130,15 +130,15 @@ class SyntheticBase(object):
 
 class SyntheticBandit(BaseBandit, SyntheticBase):
     pass
-        
+
 
 class SyntheticBanditModelExploration(ModelExplorationBase, SyntheticBase):
     pass
-   
 
-class SyntheticBanditRemovalsEvaluation(RemovalsEvaluationBase, SyntheticBase):
+
+class SyntheticBanditRemovalsExploration(RemovalsExplorationBase, SyntheticBase):
     pass
-    
-    
-class SyntheticBanditStandardFirstDifferentRemovalsEvaluation(StandardFirstDifferentRemovalsEvaluationBase, SyntheticBase):
+
+
+class SyntheticBanditStandardFirstDifferentRemovalsExploration(StandardFirstDifferentRemovalsExplorationBase, SyntheticBase):
     pass
