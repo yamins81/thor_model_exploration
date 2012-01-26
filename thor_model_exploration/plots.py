@@ -50,16 +50,125 @@ def make_plot(save=False):
     return (L, NF), (H0, NF0)
 
 
-
-def see_results(exp_key):
+from yamutils.basic import pluck
+def make_removals_plot_lfw(save=False):
     conn = pm.Connection()
     db = conn['hyperopt']
     Jobs = db['jobs']
-    H = Jobs.group(['spec.order'],
+
+    exp_key0 = 'lfw_model_exploration.LFWBanditModelExploration/hyperopt.theano_bandit_algos.TheanoRandom'
+    H0 = Jobs.group(['spec.order'],
+                   {'exp_key': exp_key0, 'state':2},
+                   {'losses': []},
+                   'function(d, o){o.losses.push(d.result.loss);}')
+
+    order_choices = params.order_choices
+    ords0 = pluck(H0, 'spec.order')
+    reinds = [ords0.index(_o) for _o in order_choices]
+    H0 = [H0[_r] for _r in reinds]
+    
+    exp_key = 'thor_model_exploration.model_exploration_bandits.LFWBanditRemovalsExploration/hyperopt.theano_bandit_algos.TheanoRandom'
+
+    H = Jobs.group(['spec.desc.order'],
                    {'exp_key': exp_key, 'state':2},
-                   {'C': 0, 'T': 0, 'T2': 0},
-                   'function(d, o){o.C += 1; o.T += d.result.loss; o.T2 += Math.pow(d.result.loss, 2);}',
-                   'function(o){o.avg = o.T/o.C; o.std = Math.sqrt(o.T2/o.C - Math.pow(o.avg,2)); o.score = 1 - o.avg;}'
+                   {'losses': []},
+                   'function(d, o){o.losses.push(d.result.loss);}')
+        
+    order_choices_removals = params.order_choices_removals
+    ords = pluck(H, 'spec.desc.order')
+    reinds = [ords.index(_o) for _o in order_choices_removals]
+    H = [H[_r] for _r in reinds]
+    
+    exp_key = 'thor_model_exploration.model_exploration_bandits.LFWBanditRemovalsEvaluation/hyperopt.theano_bandit_algos.TheanoRandom'
+    for (ind,l) in enumerate(Jobs.find({'exp_key': exp_key, 'state': 2}, fields=['result.order_results'])):
+        print(ind)
+        for _ind in range(len(l['result']['order_results'])):
+            y = l['result']['order_results'][_ind]['loss']
+            H[_ind]['losses'].append(y)
+                   
+    od = {'lpool': 'p', 'activ': 'a', 'lnorm': 'n'}
+    order_labels0 = [','.join([od[b] for b in Before]) + '|' + ','.join([od[b] for b in After]) for (Before, After) in order_choices]
+    order_labels = [','.join([od[b] for b in Before]) + '|' + ','.join([od[b] for b in After]) for (Before, After) in order_choices_removals]
+
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=(18,8))
+    plt.boxplot([1-np.array(h['losses']) for h in H0 + H])
+    means = [1-np.array(h['losses']).mean() for h in H0 + H]
+    plt.plot(range(1,len(H0)+len(H)+1), means, color='green')
+    plt.scatter(range(1,len(H0)+len(H)+1), means)
+    
+    plt.xticks(range(1,len(ords0 + ords)+1), order_labels0 + order_labels, rotation=60)
+    plt.axvline(len(ords0) + .5, linestyle='--', color='green', linewidth=2)
+    plt.axvline(len(ords0) + len(params.order_choices_single_removals) + .5, linestyle='--', color='green', linewidth=2)
+    
+    plt.title('Model form removals on LFW Verification Task', y=.95, fontsize=15)
+    plt.ylabel('Absolute performance')
+    plt.xlabel('Architecture tag')
+    if save:
+        plt.savefig('model_exploration_removal_boxplots_lfw.png')
+    
+
+def make_standardfirstdifferent_removals_plot_lfw(save=False):
+    conn = pm.Connection()
+    db = conn['hyperopt']
+    Jobs = db['jobs']
+
+
+    exp_key0 = 'lfw_model_exploration.LFWBanditModelExploration/hyperopt.theano_bandit_algos.TheanoRandom'
+    H0 = Jobs.group(['spec.order'],
+                   {'exp_key': exp_key0, 'state':2, 'spec.order': [[], ['activ','lpool','lnorm']]},
+                   {'losses': []},
+                   'function(d, o){o.losses.push(d.result.loss);}')
+                   
+    order_choices = [[[], ['activ','lpool','lnorm']]]
+
+    exp_key = 'thor_model_exploration.model_exploration_bandits.LFWBanditStandardFirstDifferentRemovalsExploration/hyperopt.theano_bandit_algos.TheanoRandom'
+
+    H = Jobs.group(['spec.desc.order'],
+                   {'exp_key': exp_key, 'state':2},
+                   {'losses': []},
+                   'function(d, o){o.losses.push(d.result.loss);}')
+        
+    standard_removed_orders_first_different = params.standard_removed_orders_first_different
+    standard_removed_orders_first_different = map(list, standard_removed_orders_first_different)
+    inds = [0, 6, 1, 7, 2, 8, 3, 9, 4, 10, 5, 11]
+    standard_removed_orders_first_different = [standard_removed_orders_first_different[ind] for ind in inds]
+    
+    ords = pluck(H, 'spec.desc.order')
+    reinds = [ords.index(_o) for _o in standard_removed_orders_first_different]
+    H = [H[_r] for _r in reinds]
+
+    od = {'lpool': 'p', 'activ': 'a', 'lnorm': 'n'}
+    order_labels0 = [','.join([od[b] for b in After]) for (Before, After) in order_choices]
+    order_labels = [','.join([od[b] for b in A]) + '*' +  ','.join([od[b] for b in C])for [[B,A],[D,C]] in standard_removed_orders_first_different]
+ 
+
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=(18,8))
+    plt.boxplot([1-np.array(h['losses']) for h in H0 + H])
+    means = [1-np.array(h['losses']).mean() for h in H0 + H]
+    plt.plot(range(1,len(H0)+len(H)+1), means, color='green')
+    plt.scatter(range(1,len(H0)+len(H)+1), means)
+    plt.xticks(range(1,len(order_labels0) + len(order_labels) + 1), order_labels0 + order_labels, rotation=60)
+    plt.axvline(len(order_labels0) + .5, linestyle='--', color='green', linewidth=2)
+
+
+    plt.title('Model form first-different removals on LFW Verification Task', y=.95, fontsize=15)
+    plt.ylabel('Absolute performance')
+    plt.xlabel('Architecture tag')
+    if save:
+        plt.savefig('model_exploration_firstdifferent_removal_boxplots_lfw.png')
+
+
+def see_results(exp_key, group_by='spec.order'):
+    conn = pm.Connection()
+    db = conn['hyperopt']
+    Jobs = db['jobs']
+    H = Jobs.group([group_by],
+                   {'exp_key': exp_key, 'state':2},
+                   {'C': 0, 'T': 0, 'T2': 0, 'M': 1},
+                   'function(d, o){o.C += 1; o.T += d.result.loss; o.T2 += Math.pow(d.result.loss, 2); o.M = Math.min(o.M, d.result.loss)}',
+                   'function(o){o.avg = o.T/o.C; o.std = Math.sqrt(o.T2/o.C - Math.pow(o.avg,2)); o.score = 1 - o.avg; o.max_score = 1 - o.M;}'
                   )
 
     return H
