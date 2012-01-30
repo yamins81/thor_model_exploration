@@ -106,6 +106,8 @@ def make_removals_plot_lfw(save=False):
     plt.xlabel('Architecture tag')
     if save:
         plt.savefig('model_exploration_removal_boxplots_lfw.png')
+
+
     
 
 def make_standardfirstdifferent_removals_plot_lfw(save=False):
@@ -216,6 +218,58 @@ def make_plot2(save=False):
     return (L, NF), (H0, NF0)
 
 
+from yamutils.basic import pluck
+def make_removals_plot_synthetic(save=False):
+    conn = pm.Connection()
+    db = conn['hyperopt']
+    Jobs = db['jobs']
+
+    exp_key0 = 'thor_model_exploration.model_exploration_bandits.SyntheticBanditModelExploration/hyperopt.theano_bandit_algos.TheanoRandom/fewer_training_examples'
+    H0 = Jobs.group(['spec.order'],
+                   {'exp_key': exp_key0, 'state':2},
+                   {'losses': []},
+                   'function(d, o){o.losses.push(d.result.loss);}')
+
+    order_choices = params.order_choices
+    ords0 = pluck(H0, 'spec.order')
+    reinds = [ords0.index(_o) for _o in order_choices]
+    H0 = [H0[_r] for _r in reinds]
+    
+    exp_key = 'thor_model_exploration.model_exploration_bandits.SyntheticBanditRemovalsExploration/hyperopt.theano_bandit_algos.TheanoRandom'
+
+    H = Jobs.group(['spec.desc.order'],
+                   {'exp_key': exp_key, 'state':2},
+                   {'losses': []},
+                   'function(d, o){o.losses.push(d.result.loss);}')
+        
+    order_choices_removals = params.order_choices_removals
+    ords = pluck(H, 'spec.desc.order')
+    reinds = [ords.index(_o) for _o in order_choices_removals]
+    H = [H[_r] for _r in reinds]
+                       
+    od = {'lpool': 'p', 'activ': 'a', 'lnorm': 'n'}
+    order_labels0 = [','.join([od[b] for b in Before]) + '|' + ','.join([od[b] for b in After]) for (Before, After) in order_choices]
+    order_labels = [','.join([od[b] for b in Before]) + '|' + ','.join([od[b] for b in After]) for (Before, After) in order_choices_removals]
+
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=(18,8))
+    plt.boxplot([1-np.array(h['losses']) for h in H0 + H])
+    means = [1-np.array(h['losses']).mean() for h in H0 + H]
+    plt.plot(range(1,len(H0)+len(H)+1), means, color='green')
+    plt.scatter(range(1,len(H0)+len(H)+1), means)
+    
+    plt.xticks(range(1,len(ords0 + ords)+1), order_labels0 + order_labels, rotation=60)
+    plt.axvline(len(ords0) + .5, linestyle='--', color='green', linewidth=2)
+    plt.axvline(len(ords0) + len(params.order_choices_single_removals) + .5, linestyle='--', color='green', linewidth=2)
+    
+    plt.title('Model form removals on Synthetic Categorization Task', y=.95, fontsize=15)
+    plt.ylabel('Absolute performance')
+    plt.xlabel('Architecture tag')
+    if save:
+        plt.savefig('model_exploration_removal_boxplots_Synthetic.png')
+    
+
+
 def rgetattr(d,k):
     k.split = k.split('.')
     if len(k) > 1:
@@ -224,7 +278,7 @@ def rgetattr(d,k):
         return d[k[0]]
 
 idf = lambda x: x
-first = lambda x: x[0]
+first = lambda x: x[0] if x is not None else x
 DISCRETE_PARAMS_BASE = [('activ.kwargs.max_out', idf,'max_out'),
           ('activ.kwargs.min_out', idf,'min_out'),
           ('filter.initialize.filter_shape', first,'filter_shape'),
@@ -319,6 +373,23 @@ def analysis(exp_key, outdir, base_ttl):
         analysis_core(qry, path, ttl, Jobs=Jobs)
 
 
+def analysis_removals(exp_key, outdir, base_ttl):
+    os.mkdir(outdir)
+    conn = pm.Connection()
+    db = conn['hyperopt']
+    Jobs = db['jobs']
+
+    base_q = {'exp_key': exp_key, 'state':2}
+    analysis_core(base_q, os.path.join(outdir,'_overall.png'), base_ttl, DISCRETE_PARAMS, pref='spec.desc.')
+    orders = params.order_choices_removals
+    for order in orders:
+        qry = copy.deepcopy(base_q)
+        qry['spec.desc.order'] = order
+        ttl = base_ttl + ' for model order ' + ofunc(order)
+        path = os.path.join(outdir,ofunc(order) + '.png')
+        analysis_core(qry, path, ttl, DISCRETE_PARAMS, Jobs=Jobs, pref='spec.desc.')
+
+
 def before_after_lfw():
     before_after_analysis('lfw_model_exploration.LFWBanditModelExploration/hyperopt.theano_bandit_algos.TheanoRandom',
                           'LFW',
@@ -352,7 +423,7 @@ def before_after_analysis2(exp_key, outroot, ttlroot):
     after_q = {'exp_key': exp_key, 'state':2, 'spec.order.0':[]}
     analysis_core([('before',before_q),('after',after_q)], 'before_after_' + outroot + '.png', ttlroot, boxplots=True, do_max = False, do_min = False)
 
-def analysis_core(queries, outfile, ttl, params=DISCRETE_PARAMS, Jobs=None, boxplots = True, percentiles = [], do_max = True, do_min = True):
+def analysis_core(queries, outfile, ttl, params=DISCRETE_PARAMS, Jobs=None, boxplots = True, percentiles = [], do_max = True, do_min = True, pref='spec.'):
     if isinstance(queries,dict):
         queries = [('',queries)]
 
@@ -373,7 +444,7 @@ def analysis_core(queries, outfile, ttl, params=DISCRETE_PARAMS, Jobs=None, boxp
         p = plt.subplot(6,6,p_ind+1)
         lines = []
         for (qryname,qry) in queries:
-            L = Jobs.group(['spec.' + param],
+            L = Jobs.group([pref + param],
                            qry,
                            {'A': []},
                            'function(d, o){o.A.push(d.result.loss);}',
@@ -382,11 +453,11 @@ def analysis_core(queries, outfile, ttl, params=DISCRETE_PARAMS, Jobs=None, boxp
             if lfunc is None:
                 lfunc_use = idf
                 ranges = [2,4,6,8,10]
-                l0 = [{'spec.' + param:r, 'A':[]} for r in ranges]
+                l0 = [{pref + param:r, 'A':[]} for r in ranges]
                 newL = []
                 for l in L:
-                    if l['spec.' + param] is not None:
-                        ind = np.searchsorted(ranges,l['spec.' + param])
+                    if l[pref + param] is not None:
+                        ind = np.searchsorted(ranges,l[pref + param])
                         l0[ind]['A'].extend(l['A'])
                     else:
                         newL.append(l)
@@ -395,7 +466,7 @@ def analysis_core(queries, outfile, ttl, params=DISCRETE_PARAMS, Jobs=None, boxp
             else:
                 lfunc_use=lfunc
 
-            vals = np.array([lfunc_use(h['spec.'+param]) for h in L])
+            vals = np.array([lfunc_use(h[pref+param]) for h in L])
 
             s = vals.argsort()
             vals_sort = vals[s]
