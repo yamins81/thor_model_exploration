@@ -227,29 +227,44 @@ def make_removals_plot_synthetic(save=False):
     exp_key0 = 'thor_model_exploration.model_exploration_bandits.SyntheticBanditModelExploration/hyperopt.theano_bandit_algos.TheanoRandom/fewer_training_examples'
     H0 = Jobs.group(['spec.order'],
                    {'exp_key': exp_key0, 'state':2},
-                   {'losses': []},
-                   'function(d, o){o.losses.push(d.result.loss);}')
+                   {'losses': [], 'count': 0},
+                   'function(d, o){o.losses.push(d.result.loss); o.count += 1}')
+
+    H0e = Jobs.group(['spec.order'],
+                   {'exp_key': exp_key0, 'state':3},
+                   {'count': 0},
+                   'function(d, o){o.count += 1;}')
 
     order_choices = params.order_choices
     ords0 = pluck(H0, 'spec.order')
     reinds = [ords0.index(_o) for _o in order_choices]
     H0 = [H0[_r] for _r in reinds]
+    ords0e = pluck(H0e, 'spec.order')
+    reinds_e = [ords0e.index(_o) for _o in order_choices]
+    H0e = [H0e[_r] for _r in reinds_e]    
     
     exp_key = 'thor_model_exploration.model_exploration_bandits.SyntheticBanditRemovalsExploration/hyperopt.theano_bandit_algos.TheanoRandom'
 
     H = Jobs.group(['spec.desc.order'],
                    {'exp_key': exp_key, 'state':2},
-                   {'losses': []},
-                   'function(d, o){o.losses.push(d.result.loss);}')
+                   {'losses': [], 'count': 0},
+                   'function(d, o){o.losses.push(d.result.loss); o.count += 1}')
+    He = Jobs.group(['spec.desc.order'],
+                   {'exp_key': exp_key, 'state':3},
+                   {'count': 0},
+                   'function(d, o){o.count += 1;}')
         
     order_choices_removals = params.order_choices_removals
     ords = pluck(H, 'spec.desc.order')
     reinds = [ords.index(_o) for _o in order_choices_removals]
     H = [H[_r] for _r in reinds]
+    ordse = pluck(He, 'spec.desc.order')
+    reinds_e = [ordse.index(_o) if _o in ordse else None for _o in order_choices_removals]
+    He = [He[_r] if _r is not None else {'count': 0} for _r in reinds_e]    
                        
     od = {'lpool': 'p', 'activ': 'a', 'lnorm': 'n'}
-    order_labels0 = [','.join([od[b] for b in Before]) + '|' + ','.join([od[b] for b in After]) for (Before, After) in order_choices]
-    order_labels = [','.join([od[b] for b in Before]) + '|' + ','.join([od[b] for b in After]) for (Before, After) in order_choices_removals]
+    order_labels0 = [','.join([od[b] for b in Before]) + '|' + ','.join([od[b] for b in After]) + ' (' + str(he['count']) + '/' + str(h['count']) + ')' for (Before, After), he, h in zip(order_choices,H0e, H0)]
+    order_labels = [','.join([od[b] for b in Before]) + '|' + ','.join([od[b] for b in After]) + ' (' + str(he['count']) + '/' + str(h['count']) + ')' for (Before, After), he, h in zip(order_choices_removals, He, H)]
 
     import matplotlib.pyplot as plt
     fig = plt.figure(figsize=(18,8))
