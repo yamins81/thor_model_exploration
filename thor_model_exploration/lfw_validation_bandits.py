@@ -26,4 +26,6 @@ class FG11TopBandit(gb.GensonBandit):
         return lfw.get_performance(None, config)
 
 
+class CVPRTopBandit(FG11TopBandit):
+    param_gen = params.cvpr_top_params
 
