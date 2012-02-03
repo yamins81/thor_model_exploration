@@ -19,7 +19,7 @@ class FG11TopBandit(gb.GensonBandit):
 
     @classmethod
     def evaluate(cls, config, ctrl):
-        return cls.performance_func(config)
+        return cls.performance_func(config, ctrl)
         
     @classmethod
     def performance_func(cls, config, ctrl):
