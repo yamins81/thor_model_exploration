@@ -74,7 +74,7 @@ class Imageset(object):
         self.filenames = [m['filename'] for m in self.meta]
         self.preproc = preproc
         normalize = self.preproc.get('global_normalize', True)
-        size = self.preproc.get('size', (200, 200))
+        size = tuple(self.preproc.get('size', (200, 200)))
         self.imgs = larray.lmap(ImgLoader(fs, ndim=3, shape=size + (3,),
                                           mode='RGB',
                                           normalize=normalize),

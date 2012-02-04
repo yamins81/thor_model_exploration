@@ -75,12 +75,12 @@ def get_performance(outfile, configs, train_test_splits=None, use_theano=True,
     test_splits = [tts['test'] for tts in train_test_splits]
     all_splits = test_splits + validate_splits + train_splits
     
-    preproc = config[0].get('preproc')
+    preproc = configs[0].get('preproc')
     if preproc is None:
         preproc = {'global_normalize': True, 
                    'size': (200, 200)}
     X, y, Xr = get_relevant_images(dataset,
-                                   preproc=preproc 
+                                   preproc=preproc,
                                    splits = all_splits,
                                    dtype='float32')
     batchsize = 4
@@ -188,7 +188,7 @@ def get_relevant_images(dataset, preproc, splits=None, dtype='uint8'):
 
     X = skdata.larray.lmap(
                 ImgLoaderResizer(
-                    shape=preproc.get('size', (200, 200)), 
+                    shape=tuple(preproc.get('size', (200, 200))), 
                     dtype=dtype,
                     normalize=preproc.get('global_normalize', True)),
                 Xr)
