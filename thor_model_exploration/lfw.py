@@ -74,7 +74,15 @@ def get_performance(outfile, configs, train_test_splits=None, use_theano=True,
     validate_splits = [tts.get('validate',[]) for tts in train_test_splits]
     test_splits = [tts['test'] for tts in train_test_splits]
     all_splits = test_splits + validate_splits + train_splits
-    X, y, Xr = get_relevant_images(dataset, splits = all_splits, dtype='float32')
+    
+    preproc = config[0].get('preproc')
+    if preproc is None:
+        preproc = {'global_normalize': True, 
+                   'size': (200, 200)}
+    X, y, Xr = get_relevant_images(dataset,
+                                   preproc=preproc 
+                                   splits = all_splits,
+                                   dtype='float32')
     batchsize = 4
     performance_comp = {}
     feature_file_names = ['features_' + c_hash + '_' + str(i) +  '.dat' for i in range(len(configs))]
@@ -154,10 +162,9 @@ def get_performance(outfile, configs, train_test_splits=None, use_theano=True,
         outfh.close()
     return result
 
-def get_relevant_images(dataset, splits=None, dtype='uint8'):
+def get_relevant_images(dataset, preproc, splits=None, dtype='uint8'):
     # load & resize logic is LFW Aligned -specific
     assert 'Aligned' in str(dataset.__class__)
-
 
     Xr, yr = dataset.raw_classification_task()
     Xr = np.array(Xr)
@@ -181,8 +188,9 @@ def get_relevant_images(dataset, splits=None, dtype='uint8'):
 
     X = skdata.larray.lmap(
                 ImgLoaderResizer(
-                    shape=(200, 200),  # lfw-specific
-                    dtype=dtype),
+                    shape=preproc.get('size', (200, 200)), 
+                    dtype=dtype,
+                    normalize=preproc.get('global_normalize', True)),
                 Xr)
 
     Xr = np.array([os.path.split(x)[-1] for x in Xr])
@@ -299,10 +307,10 @@ class PairFeatures(object):
 
 
 class ImgLoaderResizer(object):
-    """ Load 250x250 greyscale images, return normalized 200x200 float32 ones.
     """
-    def __init__(self, shape=None, ndim=None, dtype='float32', mode=None):
-        assert shape == (200, 200)
+    """
+    def __init__(self, shape=None, ndim=None, dtype='float32', mode=None,
+                 normalize=True):
         assert dtype == 'float32'
         self._shape = shape
         if ndim is None:
@@ -311,6 +319,7 @@ class ImgLoaderResizer(object):
             self._ndim = ndim
         self._dtype = dtype
         self.mode = mode
+        self.normalize = normalize
 
     def rval_getattr(self, attr, objs):
         if attr == 'shape' and self._shape is not None:
@@ -323,11 +332,15 @@ class ImgLoaderResizer(object):
 
     def __call__(self, file_path):
         im = Image.open(file_path)
-        im = im.resize((200, 200), Image.ANTIALIAS)
+        imsize = self._shape[:2]
+        if imsize != im.size:
+            im = im.resize(imsize, Image.ANTIALIAS)
         rval = np.asarray(im, 'float32')
-        rval -= rval.mean()
-        rval /= max(rval.std(), 1e-3)
-        assert rval.shape == (200, 200)
+        if self.normalize:
+            rval -= rval.mean()
+            rval /= max(rval.std(), 1e-3)
+        else:
+            rval /= 255.0
         return rval
 
 

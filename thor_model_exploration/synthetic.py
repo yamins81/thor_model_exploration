@@ -22,7 +22,12 @@ from thoreano.classifier import train_scikits
 #######synthetic task evaluation
 
 class ImgLoader(object):
-    def __init__(self, fs, shape=None, ndim=None, dtype='uint8', mode=None):
+    def __init__(self, fs, 
+                 shape=None,
+                 ndim=None,
+                 dtype='uint8',
+                 mode=None,
+                 normalize=True):
         self._shape = shape
         if ndim is None:
             self._ndim = None if (shape is None) else len(shape)
@@ -31,6 +36,7 @@ class ImgLoader(object):
         self._dtype = dtype
         self.mode = mode
         self.fs = fs
+        self.normalize = normalize
 
     def rval_getattr(self, attr, objs):
         if attr == 'shape' and self._shape is not None:
@@ -49,20 +55,29 @@ class ImgLoader(object):
         if imsize != im.size:
             im = im.resize(imsize, Image.ANTIALIAS)
         rval = np.asarray(im, dtype='float32')
-        rval -= rval.mean()
-        rval /= max(rval.std(), 1e-6)
+        if self.normalize:
+            rval -= rval.mean()
+            rval /= max(rval.std(), 1e-6)
+        else:
+            rval /= 255.0
         return rval
 
 
 class Imageset(object):
-    def __init__(self, coll, fs, query):
+    def __init__(self, coll, fs, query, preproc):
+        assert len(size) == 2 
         self.coll = coll
         self.fs = fs
         self.query = query
         cursor = coll.find(query).sort('filename')
         self.meta = list(cursor)
         self.filenames = [m['filename'] for m in self.meta]
-        self.imgs = larray.lmap(ImgLoader(fs, ndim=3, shape=(200, 200, 3),  mode='RGB'),
+        self.preproc = preproc
+        normalize = self.preproc.get('global_normalize', True)
+        size = self.preproc.get('size', (200, 200))
+        self.imgs = larray.lmap(ImgLoader(fs, ndim=3, shape=size + (3,),
+                                          mode='RGB',
+                                          normalize=normalize),
                                 self.filenames)
 
     def generate_splits(self, seed, ntrain, ntest, num_splits, labelset=None, catfunc=None):
@@ -116,7 +131,8 @@ def get_splits(dataset, catfunc, seed, ntrain, ntest, num_splits):
     return splits
 
 
-def traintest(features, meta, catfunc, splits):
+def traintest(features, meta, catfunc, splits,
+              regression=False, model_type='liblinear'):
     labels = np.array([catfunc(m) for m in meta])
     Xr = np.array(map(str,[m['filename'] for m in meta]))
     #labelset = sorted(list(set(labels)))
@@ -135,9 +151,8 @@ def traintest(features, meta, catfunc, splits):
         test_y = labels[test_inds]
         train_Xy = (train_X, train_y)
         test_Xy = (test_X, test_y)
-        print(len(train_y),len(test_y))
-        #model, earlystopper, result = train_asgd_classifier_normalize(train_Xy, test_Xy, verbose=True)
-        model, result = train_scikits(train_Xy, test_Xy, 'liblinear', regression=False)
+        model, result = train_scikits(train_Xy, test_Xy, model_type,
+                                      regression=regression)
         results.append(result)
     return results
 
@@ -158,12 +173,18 @@ MODEL_CATEGORIES_INVERTED = dict_inverse(MODEL_CATEGORIES)
 def get_performance(config, im_query, host='localhost', port=9100):
     """
     """
+    
+    preproc = config.get('preproc')
+    if preproc is None:
+        preproc = {'global_normalize': True, 
+                   'size': (200, 200)}
+                   
     conn = pm.Connection(host, port)
     db = conn['thor']
 
     coll = db['images.files']
     fs = gridfs.GridFS(db,'images')
-    dataset = Imageset(coll, fs, im_query)
+    dataset = Imageset(coll, fs, im_query, size=size, preproc=preproc)
 
     catfunc = lambda x: MODEL_CATEGORIES_INVERTED[x['config']['image']['model_id']][0]
     seed = 0
@@ -184,6 +205,7 @@ def get_performance(config, im_query, host='localhost', port=9100):
     features = features.reshape((fs[0],num_features))
     STATS = ['train_accuracy','train_ap','train_auc','test_accuracy','test_ap','test_auc']
     results = traintest(features, meta, catfunc, splits)
+        
     stats = {}
     for stat in STATS:
         stats[stat] = {'mean': np.mean([r[stat] for r in results]),
@@ -191,6 +213,27 @@ def get_performance(config, im_query, host='localhost', port=9100):
     record['training_data'] =  stats
 
     record['loss'] = 1 - (record['training_data']['test_accuracy']['mean']/100.)
+
+    regfuncs = [('ty', lambda x : x['config']['image'].get('ty',0)),
+                ('tz', lambda x : x['config']['image'].get('tz',0)),
+                ('rxy', lambda x : x['config']['image'].get('rxy',0)),
+                ('ryz', lambda x : x['config']['image'].get('ryz',0)),
+                ('rxz', lambda x : x['config']['image'].get('rxz',0)),
+                ('s', lambda x : x['config']['image'].get('s',1))
+               ]
+    
+    REGSTATS = ['train_rsquared', 'test_rsquared']
+    record['regression_data'] = {}
+    for (reg, regfunc) in regfuncs:
+        results = traintest(features, meta, regfunc, splits,
+                            regression=True,
+                            model_type='linear_model.RidgeCV')
+        stats = {}
+        for stat in REGSTATS:
+            stats[stat] = {'mean': np.mean([r[stat] for r in results]),
+                           'std': np.std([r[stat] for r in results])}
+        record['regression_data'][reg] = stats
+        
 
     print('DONE')
     return record

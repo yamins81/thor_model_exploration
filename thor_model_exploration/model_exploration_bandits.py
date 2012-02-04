@@ -38,6 +38,10 @@ class ModelExplorationBase(BaseBandit):
         return cls.performance_func(desc, ctrl)
 
 
+class ModelExplorationOtherBase(ModelExplorationBase):
+    param_gen = params.order_value_params_other
+
+
 class ModelEvaluationBase(ModelExplorationBase):
     param_gen = params.value_params
     orders = params.order_choices
@@ -62,6 +66,10 @@ class ModelEvaluationBase(ModelExplorationBase):
 
 class RemovalsExplorationBase(ModelExplorationBase):
     param_gen = params.order_removals_value_params
+
+
+class RemovalsExplorationOtherBase(ModelExplorationBase):
+    param_gen = params.order_removals_value_params_other
 
 
 class RemovalsEvaluationBase(ModelEvaluationBase):
@@ -89,7 +97,7 @@ class LFWBase(object):
     @classmethod
     def performance_func(cls, config, ctrl):
         return lfw.get_performance(None, config)
-
+        
 
 class LFWBandit(BaseBandit, LFWBase):
     pass
@@ -99,7 +107,15 @@ class LFWBanditModelExploration(ModelExplorationBase, LFWBase):
     pass
 
 
+class LFWBanditModelExplorationOther(ModelExplorationOtherBase, LFWBase):
+    pass
+
+
 class LFWBanditRemovalsEvaluation(RemovalsEvaluationBase, LFWBase):
+    pass
+
+
+class LFWBanditRemovalsExplorationOther(RemovalsExplorationOtherBase, LFWBase):
     pass
 
 
@@ -136,7 +152,15 @@ class SyntheticBanditModelExploration(ModelExplorationBase, SyntheticBase):
     pass
 
 
+class SyntheticBanditModelExplorationOther(ModelExplorationOtherBase, SyntheticBase):
+    pass
+
+
 class SyntheticBanditRemovalsExploration(RemovalsExplorationBase, SyntheticBase):
+    pass
+
+
+class SyntheticBanditRemovalsExplorationOther(RemovalsExplorationOtherBase, SyntheticBase):
     pass
 
 

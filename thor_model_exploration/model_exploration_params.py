@@ -74,8 +74,14 @@ orders = choice(order_choices)
 values = [{'lnorm':lnorm, 'lpool':lpool, 'activ':activ, 'filter':filter1},
           {'lnorm':lnorm, 'lpool':lpool, 'activ':activ, 'filter':filter2},
           {'lnorm':lnorm, 'lpool':lpool, 'activ':activ, 'filter':filter3}]
-value_params = {'values':values}
+value_params = {'values': values}
 order_value_params = {'order':orders, 'values':values}
+
+order_value_params_other = copy.deepcopy(order_value_params)
+order_value_params_other['preproc'] = {'size': choice([150, 300]),
+                                       'global_normalize': false}
+
+
 values2 = [{'lnorm':lnorm, 'lpool':lpool, 'activ':activ, 'filter':filter1},
            {'lnorm':lnorm, 'lpool':lpool, 'activ':activ, 'filter':filter2}]
 order_value_params2 = {'order':orders, 'values':values2}
@@ -87,6 +93,7 @@ order_choices_double_removals_base = [[[list(_o[:_ind]),list(_o[_ind:])] for _o 
 order_choices_double_removals = list(itertools.chain(*order_choices_double_removals_base))
 order_choices_removals = order_choices_single_removals + order_choices_double_removals
 
+
 def get_relevant_values(_v, _ord):
     ops = _ord[0] + _ord[1] + ['filter']
     _v = copy.deepcopy(_v)
@@ -97,19 +104,29 @@ def get_relevant_values(_v, _ord):
 order_choices_removals_values = [{'order':_o, 'values': get_relevant_values(values, _o)} for _o in order_choices_removals]
 order_removals_value_params = {'desc': choice(order_choices_removals_values)}
 
+order_choices_removals_values_other = [{'order':_o,
+                                        'values': get_relevant_values(values, _o),
+                                        'preproc': {'size': choice([150, 300]),
+                                                    'global_normalize': false}
+                                        } for _o in order_choices_removals]
+order_removals_value_params_other = {'desc': choice(order_choices_removals_values_other)}
+
+
 def get_reordered_model_config(config):
     if 'desc' in config:
         config = config['desc']
     before, after = config['order']
     values = config['values']
     layers = []
-    config = {'desc':layers}
+    newconfig = {'desc':layers}
     for (layer_ind, vals) in enumerate(values):
         B = [(b, vals[b]) for b in before]
         A = [(a, vals[a]) for a in after]
         layer = B + [('fbcorr',vals['filter'])] + A + [('rescale',rescale)]
         layers.append(layer)
-    return config
+    if 'preproc' in config:
+        newconfig['preproc'] = config['preproc'] 
+    return newconfig
 
 
 def remove(s,s0):
