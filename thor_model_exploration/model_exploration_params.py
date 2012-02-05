@@ -78,7 +78,7 @@ value_params = {'values': values}
 order_value_params = {'order':orders, 'values':values}
 
 order_value_params_other = copy.deepcopy(order_value_params)
-order_value_params_other['preproc'] = {'size': choice([(150, 150), (300, 300)]),
+order_value_params_other['preproc'] = {'size': choice([(150, 150), (250, 250)]),
                                        'global_normalize': false}
 
 
@@ -106,7 +106,7 @@ order_removals_value_params = {'desc': choice(order_choices_removals_values)}
 
 order_choices_removals_values_other = [{'order':_o,
                                         'values': get_relevant_values(values, _o),
-                                        'preproc': {'size': choice([(150, 150), (300, 300)]),
+                                        'preproc': {'size': choice([(150, 150), (250, 250)]),
                                                     'global_normalize': false}
                                         } for _o in order_choices_removals]
 order_removals_value_params_other = {'desc': choice(order_choices_removals_values_other)}
