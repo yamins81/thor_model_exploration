@@ -50,6 +50,8 @@ def make_plot(save=False):
     return (L, NF), (H0, NF0)
 
 
+
+
 from yamutils.basic import pluck
 def make_removals_plot_lfw(save=False):
     conn = pm.Connection()
@@ -106,8 +108,6 @@ def make_removals_plot_lfw(save=False):
     plt.xlabel('Architecture tag')
     if save:
         plt.savefig('model_exploration_removal_boxplots_lfw.png')
-
-
     
 
 def make_standardfirstdifferent_removals_plot_lfw(save=False):
@@ -160,6 +160,93 @@ def make_standardfirstdifferent_removals_plot_lfw(save=False):
     plt.xlabel('Architecture tag')
     if save:
         plt.savefig('model_exploration_firstdifferent_removal_boxplots_lfw.png')
+
+
+def make_plot_lfw_reorder_other(save=False):
+    conn = pm.Connection()
+    db = conn['hyperopt']
+    Jobs = db['jobs']
+    
+    exp_key = 'thor_model_exploration.model_exploration_bandits.LFWBanditModelExplorationOther/hyperopt.Random'
+
+    H = Jobs.group(['spec.order'],
+                   {'exp_key': exp_key, 'state':2, 
+                    'spec.preproc.size.0':250
+                   },
+                   {'losses': []},
+                   'function(d, o){o.losses.push(d.result.loss);}')
+        
+    order_choices = params.order_choices
+    ords = pluck(H, 'spec.order')
+    reinds = [ords.index(_o) for _o in order_choices]
+    H = [H[_r] for _r in reinds]
+
+    od = {'lpool': 'p', 'activ': 'a', 'lnorm': 'n'}
+    order_labels = [','.join([od[b] for b in Before]) + '|' + ','.join([od[b] for b in After]) for (Before, After) in order_choices]
+ 
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=(18,8))
+    plt.boxplot([1-np.array(h['losses']) for h in H])
+    means = [1-np.array(h['losses']).mean() for h in H]
+    plt.plot(range(1,len(H)+1), means, color='green')
+    plt.scatter(range(1,len(H)+1), means)
+    
+    plt.xticks(range(1,len(ords)+1),  order_labels, rotation=60)
+    
+    plt.ylabel('Absolute performance')
+    plt.xlabel('Architecture tag')
+
+
+from yamutils.basic import pluck
+def make_removals_plot_lfw_other(save=False):
+    conn = pm.Connection()
+    db = conn['hyperopt']
+    Jobs = db['jobs']
+
+    exp_key0 = 'thor_model_exploration.model_exploration_bandits.LFWBanditModelExplorationOther/hyperopt.Random'
+    H0 = Jobs.group(['spec.order'],
+                   {'exp_key': exp_key0, 'state':2,
+                    'spec.preproc.size.0':250
+                   },
+                   {'losses': []},
+                   'function(d, o){o.losses.push(d.result.loss);}')
+
+    order_choices = params.order_choices
+    ords0 = pluck(H0, 'spec.order')
+    reinds = [ords0.index(_o) for _o in order_choices]
+    H0 = [H0[_r] for _r in reinds]
+    
+    exp_key = 'thor_model_exploration.model_exploration_bandits.LFWBanditRemovalsExplorationOther/hyperopt.Random'
+
+    H = Jobs.group(['spec.desc.order'],
+                   {'exp_key': exp_key, 'state':2,
+                    'spec.desc.preproc.size.0':250
+                   },
+                   {'losses': []},
+                   'function(d, o){o.losses.push(d.result.loss);}')
+        
+    order_choices_removals = params.order_choices_removals
+    ords = pluck(H, 'spec.desc.order')
+    reinds = [ords.index(_o) for _o in order_choices_removals]
+    H = [H[_r] for _r in reinds]
+                       
+    od = {'lpool': 'p', 'activ': 'a', 'lnorm': 'n'}
+    order_labels0 = [','.join([od[b] for b in Before]) + '|' + ','.join([od[b] for b in After]) for (Before, After) in order_choices]
+    order_labels = [','.join([od[b] for b in Before]) + '|' + ','.join([od[b] for b in After]) for (Before, After) in order_choices_removals]
+
+    import matplotlib.pyplot as plt
+    fig = plt.figure(figsize=(18,8))
+    plt.boxplot([1-np.array(h['losses']) for h in H0 + H])
+    means = [1-np.array(h['losses']).mean() for h in H0 + H]
+    plt.plot(range(1,len(H0)+len(H)+1), means, color='green')
+    plt.scatter(range(1,len(H0)+len(H)+1), means)
+    
+    plt.xticks(range(1,len(ords0 + ords)+1), order_labels0 + order_labels, rotation=60)
+    plt.axvline(len(ords0) + .5, linestyle='--', color='green', linewidth=2)
+    plt.axvline(len(ords0) + len(params.order_choices_single_removals) + .5, linestyle='--', color='green', linewidth=2)
+    
+    plt.ylabel('Absolute performance')
+    plt.xlabel('Architecture tag')
 
 
 def see_results(exp_key, group_by='spec.order'):
