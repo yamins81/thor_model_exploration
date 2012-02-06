@@ -78,7 +78,10 @@ value_params = {'values': values}
 order_value_params = {'order':orders, 'values':values}
 
 order_value_params_other = copy.deepcopy(order_value_params)
-order_value_params_other['preproc'] = {'size': choice([(150, 150), (250, 250)]),
+order_value_params_other['preproc'] = {'size': choice([
+                                                       #(150, 150),
+                                                       (250, 250)
+                                                      ]),
                                        'global_normalize': false}
 
 

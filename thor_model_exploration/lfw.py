@@ -50,7 +50,7 @@ def get_test_performance(outfile, config, use_theano=True, flip_lr=False, compar
 
 
 def get_performance(outfile, configs, train_test_splits=None, use_theano=True,
-                    flip_lr=False, tlimit=35, comparisons=DEFAULT_COMPARISONS):
+                    flip_lr=False, tlimit=None, comparisons=DEFAULT_COMPARISONS):
     """Given a config and list of splits, test config on those splits.
 
     Splits can either be "view1-like", e.g. train then test or "view2-like", e.g.
