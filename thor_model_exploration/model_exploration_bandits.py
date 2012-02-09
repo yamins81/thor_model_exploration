@@ -44,6 +44,10 @@ class ModelExplorationOtherBase(ModelExplorationBase):
 
 class ModelExplorationGoodBase(ModelExplorationBase):
     param_gen = params.good_order_value_params
+
+
+class ModelExplorationGoodBase2(ModelExplorationBase):
+    param_gen = params.good_order_value_params2
     
 
 class ModelEvaluationBase(ModelExplorationBase):
@@ -116,6 +120,10 @@ class LFWBanditModelExplorationOther(ModelExplorationOtherBase, LFWBase):
 
 
 class LFWBanditModelExplorationGood(ModelExplorationGoodBase, LFWBase):
+    pass
+
+
+class LFWBanditModelExplorationGood2(ModelExplorationGoodBase2, LFWBase):
     pass
 
 

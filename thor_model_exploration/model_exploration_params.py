@@ -282,12 +282,23 @@ def trans_fn(x):
             ord[cur].append(tdict[y])
     return ord
     
+
+ap_values = [{'lpool':lpool, 'activ':activ, 'filter':filter1},
+             {'lpool':lpool, 'activ':activ, 'filter':filter2},
+             {'lpool':lpool, 'activ':activ, 'filter':filter3}]
             
-good_order_abbrevs = ['|apn', '|anp', '|nap', '|ap', 'p|a', 'ap|', '|pn']
+good_order_abbrevs = ['|ap', 'p|a', 'ap|']
 good_orders = map(trans_fn, good_order_abbrevs)
-good_order_choices_values = [{'order':_o, 
-                              'values': get_relevant_values(values, _o),
-                              'preproc':{'size': [200, 200],
-                                         'global_normalize': choice([0, 1])}
-                              } for _o in good_orders]
-good_order_value_params = {'desc': choice(good_order_choices_values)}
+good_order_value_params = {'desc': {'order': choice(good_orders), 
+                                    'values': ap_values,
+                                    'preproc':{'size': [200, 200],
+                                    'global_normalize': choice([0, 1])}
+                                    }}
+
+good_order_abbrevs2 = ['|apn', '|anp', '|nap']
+good_orders2 = map(trans_fn, good_order_abbrevs2)
+good_order_value_params2 = {'desc': {'order': choice(good_orders2),
+                                     'values': values,
+                                     'preproc':{'size': [200, 200],
+                                     'global_normalize': choice([0, 1])}
+                                     }}
