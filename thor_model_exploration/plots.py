@@ -248,6 +248,9 @@ def make_removals_plot_lfw_other(save=False):
     plt.ylabel('Absolute performance')
     plt.xlabel('Architecture tag')
 
+    plt.title('Model form removals on LFW Verification Task\nOther params', y=.95, fontsize=15)
+    if save:
+        plt.savefig('model_exploration_removal_boxplots_lfw_other.png')
 
 def see_results(exp_key, group_by='spec.order'):
     conn = pm.Connection()
