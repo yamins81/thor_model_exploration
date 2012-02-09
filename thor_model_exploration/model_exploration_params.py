@@ -269,3 +269,25 @@ cvpr_top_params = {'desc':[[('lnorm',
          'remove_mean': 1,
          'stretch': 0.1,
          'threshold': 1}})]]}
+         
+def trans_fn(x):
+    tdict = {'a': 'activ', 'p': 'lpool', 'n': 'lnorm'}
+    ord = [[]]
+    cur = 0
+    for y in x:
+        if y == '|':
+            cur += 1
+            ord.append([])
+        else:
+            ord[cur].append(tdict[y])
+    return ord
+    
+            
+good_order_abbrevs = ['|apn', '|anp', '|nap', '|ap', 'p|a', 'ap|', '|pn']
+good_orders = map(trans_fn, good_order_abbrevs)
+good_order_choices_values = [{'order':_o, 
+                              'values': get_relevant_values(values, _o),
+                              'preproc':{'size': [200, 200],
+                                         'global_normalize': choice([0, 1])}
+                              } for _o in good_orders]
+good_order_value_params = {'desc': choice(good_order_choices_values)}
